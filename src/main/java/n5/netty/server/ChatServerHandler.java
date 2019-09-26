@@ -1,4 +1,4 @@
-package n3.server;
+package n5.netty.server;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -7,25 +7,33 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import n5.a1.annotation.MappingDriver;
+import n5.a1.chain.ChainImpl;
+import n5.a1.dispatch.Dispatch;
+import n5.a1.dispatch.HandleDispatch;
+import n5.a1.proxy.DispatchProxy;
+import n5.netty.common.Message;
+
+import java.io.IOException;
 
 /**
  * @author haya
  */
 @Sharable
-public class ChatServerHandler extends SimpleChannelInboundHandler<String> {
+public class ChatServerHandler extends SimpleChannelInboundHandler<Message> {
     private static ChannelGroup channelGroup = new DefaultChannelGroup( GlobalEventExecutor.INSTANCE );
-
+    static {
+        try {
+            new MappingDriver().start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     @Override
-    protected void channelRead0(ChannelHandlerContext context, String msg) {
+    protected void channelRead0(ChannelHandlerContext context, Message msg) {
         System.out.println(msg);
-        Channel channel = context.channel();
-        channelGroup.forEach( item->{
-            if (item != channel) {
-                item.writeAndFlush( "other:" + channel.remoteAddress() + ", " + msg );
-            } else {
-                item.writeAndFlush( "self:"  + msg );
-            }
-        } );
+        Dispatch dispatch = new DispatchProxy().getDispatch( new HandleDispatch(), new ChainImpl() );
+        dispatch.dispatch( channelGroup, context, msg );
     }
 
     @Override
